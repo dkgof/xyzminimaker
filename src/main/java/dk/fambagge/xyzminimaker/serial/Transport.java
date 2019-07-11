@@ -1,99 +1,84 @@
-/*    */ package dk.fambagge.xyzminimaker.serial;
-/*    */ 
-/*    */ import java.io.IOException;
-/*    */ import java.nio.ByteBuffer;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class Transport
-/*    */   implements TransportInterface
-/*    */ {
-/* 14 */   protected static final Object globalOpenStateAtomicSync = new Object();
-/* 15 */   protected final Object writeAtomicSync = new Object();
-/* 16 */   protected final Object readAtomicSync = new Object();
-/* 17 */   protected final Object localOpenStateAtomicSync = new Object();
-/*    */   
-/*    */ 
-/*    */   public String getGeneralName()
-/*    */   {
-/* 22 */     return getClass().getSimpleName().toUpperCase().replaceAll("TRANSPORT", "");
-/*    */   }
-/*    */   
-/*    */ 
-/*    */ 
-/*    */   public void write(String paramString)
-/*    */     throws IOException
-/*    */   {
-/* 30 */     write(paramString.getBytes());
-/*    */   }
-/*    */   
-/*    */   public void write(byte[] paramArrayOfByte)
-/*    */     throws IOException
-/*    */   {
-/* 36 */     write(paramArrayOfByte, paramArrayOfByte.length);
-/*    */   }
-/*    */   
-/*    */   public void write(byte paramByte, byte[] paramArrayOfByte)
-/*    */     throws IOException
-/*    */   {
-/* 42 */     synchronized (this.writeAtomicSync) {
-/* 43 */       write(new byte[] { paramByte });
-/* 44 */       write(paramArrayOfByte, paramArrayOfByte.length);
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   public void write(ByteBuffer paramByteBuffer)
-/*    */     throws IOException
-/*    */   {
-/* 51 */     write(paramByteBuffer, paramByteBuffer.remaining());
-/*    */   }
-/*    */   
-/*    */   public void write(ByteBuffer paramByteBuffer, int paramInt)
-/*    */     throws IOException
-/*    */   {
-/* 57 */     byte[] arrayOfByte = new byte[paramByteBuffer.remaining()];
-/* 58 */     paramByteBuffer.get(arrayOfByte);
-/* 59 */     write(arrayOfByte);
-/*    */   }
-/*    */   
-/*    */   public String readAnswer(String paramString1, String paramString2, int paramInt)
-/*    */     throws IOException, InterruptedException
-/*    */   {
-/* 65 */     synchronized (this.writeAtomicSync) {
-/* 66 */       synchronized (this.readAtomicSync) {
-/* 67 */         write(paramString1);
-/* 68 */         flush();
-/* 69 */         return readLine(paramString2, paramInt);
-/*    */       }
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   public String readLine(String paramString, int paramInt)
-/*    */     throws IOException, InterruptedException
-/*    */   {
-/* 77 */     synchronized (this.readAtomicSync) {
-/* 78 */       long l = System.nanoTime();
-/* 79 */       StringBuilder localStringBuilder = new StringBuilder();
-/* 80 */       while (System.nanoTime() - l < paramInt * 1000000L) {
-/* 81 */         char c = (char)read(paramInt);
-/*    */         
-/* 83 */         localStringBuilder.append(c);
-/*    */         
-/* 85 */         int i = localStringBuilder.length() - paramString.length();
-/* 86 */         if ((i >= 0) && (localStringBuilder.substring(i).equals(paramString))) {
-/* 87 */           return localStringBuilder.toString().substring(0, i);
-/*    */         }
-/*    */       }
-/* 90 */       return localStringBuilder.toString();
-/*    */     }
-/*    */   }
-/*    */ }
+package dk.fambagge.xyzminimaker.serial;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
-/* Location:              D:\Misc\Downloads\XYZPrint\XYZMinimaker-1.0-SNAPSHOT.jar!\dk\fambagge\xyzminimaker\serial\Transport.class
- * Java compiler version: 8 (52.0)
- * JD-Core Version:       0.7.1
- */
+public abstract class Transport
+        implements TransportInterface {
+
+    protected static final Object globalOpenStateAtomicSync = new Object();
+    protected final Object writeAtomicSync = new Object();
+    protected final Object readAtomicSync = new Object();
+    protected final Object localOpenStateAtomicSync = new Object();
+
+    @Override
+    public String getGeneralName() {
+        return getClass().getSimpleName().toUpperCase().replaceAll("TRANSPORT", "");
+    }
+
+    @Override
+    public void write(String paramString)
+            throws IOException {
+        write(paramString.getBytes());
+    }
+
+    @Override
+    public void write(byte[] paramArrayOfByte)
+            throws IOException {
+        write(paramArrayOfByte, paramArrayOfByte.length);
+    }
+
+    @Override
+    public void write(byte paramByte, byte[] paramArrayOfByte)
+            throws IOException {
+        synchronized (this.writeAtomicSync) {
+            write(new byte[]{paramByte});
+            write(paramArrayOfByte, paramArrayOfByte.length);
+        }
+    }
+
+    @Override
+    public void write(ByteBuffer paramByteBuffer)
+            throws IOException {
+        write(paramByteBuffer, paramByteBuffer.remaining());
+    }
+
+    @Override
+    public void write(ByteBuffer paramByteBuffer, int paramInt)
+            throws IOException {
+        byte[] arrayOfByte = new byte[paramByteBuffer.remaining()];
+        paramByteBuffer.get(arrayOfByte);
+        write(arrayOfByte);
+    }
+
+    @Override
+    public String readAnswer(String paramString1, String paramString2, int paramInt)
+            throws IOException, InterruptedException {
+        synchronized (this.writeAtomicSync) {
+            synchronized (this.readAtomicSync) {
+                write(paramString1);
+                flush();
+                return readLine(paramString2, paramInt);
+            }
+        }
+    }
+
+    public String readLine(String paramString, int paramInt)
+            throws IOException, InterruptedException {
+        synchronized (this.readAtomicSync) {
+            long l = System.nanoTime();
+            StringBuilder localStringBuilder = new StringBuilder();
+            while (System.nanoTime() - l < paramInt * 1000000L) {
+                char c = (char) read(paramInt);
+
+                localStringBuilder.append(c);
+
+                int i = localStringBuilder.length() - paramString.length();
+                if ((i >= 0) && (localStringBuilder.substring(i).equals(paramString))) {
+                    return localStringBuilder.toString().substring(0, i);
+                }
+            }
+            return localStringBuilder.toString();
+        }
+    }
+}

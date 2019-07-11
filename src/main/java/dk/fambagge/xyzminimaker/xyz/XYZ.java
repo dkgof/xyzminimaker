@@ -1,6 +1,3 @@
-// Decompiled by DJ v3.12.12.101 Copyright 2016 Atanas Neshkov  Date: 14-11-2018 12:42:30
-// Home Page:  http://www.neshkov.com/dj.html - Check often for new version!
-// Source File Name:   XYZ.java
 package dk.fambagge.xyzminimaker.xyz;
 
 import dk.fambagge.xyzminimaker.serial.SerialTransport;
@@ -13,7 +10,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class XYZ {
-    private SerialTransport serial;
+
+    private final SerialTransport serial;
 
     public XYZ(String string) {
         this.serial = new SerialTransport(string, 115200);
@@ -30,8 +28,7 @@ public class XYZ {
                 xYZInfo.parse(string);
             }
             );
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             System.out.println("Error querying printer info: " + ex);
         }
         return xYZInfo;
@@ -61,10 +58,10 @@ public class XYZ {
                         byteBuffer.putInt(n2);
                         byteBuffer.putInt(n3);
                         byteBuffer.put(arrby2, 0, n3);
-                        byteBuffer.put((byte)0);
-                        byteBuffer.put((byte)0);
-                        byteBuffer.put((byte)0);
-                        byteBuffer.put((byte)0);
+                        byteBuffer.put((byte) 0);
+                        byteBuffer.put((byte) 0);
+                        byteBuffer.put((byte) 0);
+                        byteBuffer.put((byte) 0);
                         byteBuffer.flip();
                         System.out.println("Sending block: " + n2 + " [" + byteBuffer.remaining() + "]");
                         this.serial.write(byteBuffer);
@@ -86,8 +83,7 @@ public class XYZ {
             } else {
                 System.out.println("Encoded file was 0 bytes");
             }
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -98,8 +94,7 @@ public class XYZ {
         try {
             String string = this.serial.readAnswer("XYZv3/config=print[cancel]\n", "$\n", 2500);
             System.out.println("Printer cancel reply: [" + string + "]");
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -110,8 +105,7 @@ public class XYZ {
         try {
             String string = this.serial.readAnswer("XYZv3/config=print[pause]\n", "$\n", 2500);
             System.out.println("Printer pause reply: [" + string + "]");
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -122,8 +116,7 @@ public class XYZ {
         try {
             String string = this.serial.readAnswer("XYZv3/config=print[resume]\n", "$\n", 2500);
             System.out.println("Printer resume reply: [" + string + "]");
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -132,8 +125,7 @@ public class XYZ {
         this.connect();
         try {
             String answer = this.serial.readAnswer("XYZv3/action=home\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -145,8 +137,7 @@ public class XYZ {
         }
         try {
             String answer = this.serial.readAnswer("XYZv3/action=jog:{\"axis\":\"" + axis + "\",\"dir\":\"" + dir + "\",\"len\":\"" + n + "\"}\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -154,8 +145,7 @@ public class XYZ {
     public void startFilamentLoad() {
         try {
             String answer = this.serial.readAnswer("XYZv3/action=load:new\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -163,8 +153,7 @@ public class XYZ {
     public void stopFilamentLoad() {
         try {
             String answer = this.serial.readAnswer("XYZv3/action=load:cancel\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -172,8 +161,7 @@ public class XYZ {
     public void startFilamentUnload() {
         try {
             String answer = this.serial.readAnswer("XYZv3/action=unload:new\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -181,8 +169,7 @@ public class XYZ {
     public void stopFilamentUnload() {
         try {
             String answer = this.serial.readAnswer("XYZv3/action=unload:cancel\n", "$\n", 2500);
-        }
-        catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -203,13 +190,11 @@ public class XYZ {
                 while (!string.isEmpty()) {
                     string = this.serial.readLine("\n", 1000);
                 }
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
             }
             System.out.println("Done!");
             System.out.println("Serial opened on port: " + this.serial.getPortIdentifier());
-        }
-        catch (IOException var1_3) {
+        } catch (IOException var1_3) {
             System.out.println("Unable to connect to printer: " + var1_3);
         }
     }
