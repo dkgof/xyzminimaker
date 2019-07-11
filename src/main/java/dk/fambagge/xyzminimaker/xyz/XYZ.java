@@ -13,72 +13,72 @@ public class XYZ {
 
     private final SerialTransport serial;
 
-    public XYZ(String string) {
-        this.serial = new SerialTransport(string, 115200);
+    public XYZ(String portName) {
+        this.serial = new SerialTransport(portName, 115200);
         this.connect();
     }
 
     public synchronized XYZInfo queryAll() {
         this.connect();
-        XYZInfo xYZInfo = new XYZInfo();
+        XYZInfo info = new XYZInfo();
         try {
             System.out.println("Query all info from printer...");
-            String string2 = this.serial.readAnswer("XYZv3/query=a\n", "$\n", 2500);
-            Arrays.stream(string2.split("\n")).forEach(string -> {
-                xYZInfo.parse(string);
+            String reply = this.serial.readAnswer("XYZv3/query=a\n", "$\n", 2500);
+            Arrays.stream(reply.split("\n")).forEach(string -> {
+                info.parse(string);
             }
             );
         } catch (Exception ex) {
             System.out.println("Error querying printer info: " + ex);
         }
-        return xYZInfo;
+        return info;
     }
 
-    public synchronized void printFile(byte[] arrby) {
+    public synchronized void printFile(byte[] data) {
         this.connect();
         try {
-            int n = arrby.length;
-            if (n > 0) {
-                System.out.println("Send upload command to printer... [" + n + "]");
+            int remainingBytes = data.length;
+            if (remainingBytes > 0) {
+                System.out.println("Send upload command to printer... [" + remainingBytes + "]");
                 this.serial.flush();
-                String string = "XYZv3/upload=temp.gcode," + n + "\n";
-                System.out.println("Sending cmd: [" + string + "]");
-                String string2 = this.serial.readAnswer(string, "ok\n", 2500);
-                System.out.println("Upload start reply: " + string2);
-                if (string2.trim().isEmpty()) {
+                String printCmd = "XYZv3/upload=temp.gcode," + remainingBytes + "\n";
+                System.out.println("Sending cmd: [" + printCmd + "]");
+                String reply = this.serial.readAnswer(printCmd, "ok\n", 2500);
+                System.out.println("Upload start reply: " + reply);
+                if (reply.trim().isEmpty()) {
                     System.out.println("We got reply, start upload...");
-                    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(arrby);
-                    byte[] arrby2 = new byte[8192];
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(arrby2.length + 12);
+                    ByteArrayInputStream bin = new ByteArrayInputStream(data);
+                    byte[] buffer = new byte[8192];
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(buffer.length + 12);
                     byteBuffer.order(ByteOrder.BIG_ENDIAN);
-                    int n2 = 0;
-                    while (n > 0) {
-                        int n3 = byteArrayInputStream.read(arrby2);
+                    int blockCounter = 0;
+                    while (remainingBytes > 0) {
+                        int blockLength = bin.read(buffer);
                         byteBuffer.clear();
-                        byteBuffer.putInt(n2);
-                        byteBuffer.putInt(n3);
-                        byteBuffer.put(arrby2, 0, n3);
+                        byteBuffer.putInt(blockCounter);
+                        byteBuffer.putInt(blockLength);
+                        byteBuffer.put(buffer, 0, blockLength);
                         byteBuffer.put((byte) 0);
                         byteBuffer.put((byte) 0);
                         byteBuffer.put((byte) 0);
                         byteBuffer.put((byte) 0);
                         byteBuffer.flip();
-                        System.out.println("Sending block: " + n2 + " [" + byteBuffer.remaining() + "]");
+                        System.out.println("Sending block: " + blockCounter + " [" + byteBuffer.remaining() + "]");
                         this.serial.write(byteBuffer);
                         this.serial.flush();
-                        string2 = this.serial.readLine("ok\n", 5000);
-                        System.out.println("Block reply: " + string2);
-                        if (!string2.trim().isEmpty()) {
-                            System.out.println("Error during block transfer...");
+                        reply = this.serial.readLine("ok\n", 5000);
+                        System.out.println("Block reply: " + reply);
+                        if (!reply.trim().isEmpty()) {
+                            System.out.println("Error during block transfer: "+reply);
                             break;
                         }
-                        n -= n3;
-                        ++n2;
+                        remainingBytes -= blockLength;
+                        ++blockCounter;
                     }
-                    string2 = this.serial.readAnswer("XYZv3/uploadDidFinish", "ok\n", 2500);
-                    System.out.println("uploadDidFinish reply: " + string2);
+                    reply = this.serial.readAnswer("XYZv3/uploadDidFinish", "ok\n", 2500);
+                    System.out.println("uploadDidFinish reply: " + reply);
                 } else {
-                    System.out.println("Non empty reply!");
+                    System.out.println("Non empty upload reply: "+reply);
                 }
             } else {
                 System.out.println("Encoded file was 0 bytes");
@@ -103,8 +103,8 @@ public class XYZ {
         this.connect();
         System.out.println("Send printer pause...");
         try {
-            String string = this.serial.readAnswer("XYZv3/config=print[pause]\n", "$\n", 2500);
-            System.out.println("Printer pause reply: [" + string + "]");
+            String reply = this.serial.readAnswer("XYZv3/config=print[pause]\n", "$\n", 2500);
+            System.out.println("Printer pause reply: [" + reply + "]");
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -114,8 +114,8 @@ public class XYZ {
         this.connect();
         System.out.println("Send printer resume...");
         try {
-            String string = this.serial.readAnswer("XYZv3/config=print[resume]\n", "$\n", 2500);
-            System.out.println("Printer resume reply: [" + string + "]");
+            String reply = this.serial.readAnswer("XYZv3/config=print[resume]\n", "$\n", 2500);
+            System.out.println("Printer resume reply: [" + reply + "]");
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -130,13 +130,13 @@ public class XYZ {
         }
     }
 
-    public void jog(int n, String axis, boolean bl) {
+    public void jog(int length, String axis, boolean oppositeDirection) {
         String dir = "+";
-        if (bl) {
+        if (oppositeDirection) {
             dir = "-";
         }
         try {
-            String answer = this.serial.readAnswer("XYZv3/action=jog:{\"axis\":\"" + axis + "\",\"dir\":\"" + dir + "\",\"len\":\"" + n + "\"}\n", "$\n", 2500);
+            String answer = this.serial.readAnswer("XYZv3/action=jog:{\"axis\":\"" + axis + "\",\"dir\":\"" + dir + "\",\"len\":\"" + length + "\"}\n", "$\n", 2500);
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(XYZ.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -186,16 +186,16 @@ public class XYZ {
             this.serial.open(5000);
             try {
                 System.out.println("Cleaning serial:");
-                String string = "NAN";
-                while (!string.isEmpty()) {
-                    string = this.serial.readLine("\n", 1000);
+                String line = "NAN";
+                while (!line.isEmpty()) {
+                    line = this.serial.readLine("\n", 1000);
                 }
             } catch (Exception ex) {
             }
             System.out.println("Done!");
             System.out.println("Serial opened on port: " + this.serial.getPortIdentifier());
-        } catch (IOException var1_3) {
-            System.out.println("Unable to connect to printer: " + var1_3);
+        } catch (IOException ex) {
+            System.out.println("Unable to connect to printer: " + ex);
         }
     }
 }

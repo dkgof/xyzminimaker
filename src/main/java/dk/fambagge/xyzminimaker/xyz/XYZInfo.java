@@ -40,87 +40,85 @@ public class XYZInfo {
     private String printerSerial = "";
     private String firmwareVersion = "0.0.0";
 
-    public void parse(String paramString) {
-        String[] arrayOfString;
+    public void parse(String line) {
+        if (line.startsWith("t:")) {
+            String[] split = line.substring(2).split(",");
 
-        if (paramString.startsWith("t:")) {
-            arrayOfString = paramString.substring(2).split(",");
+            this.extruderTemp = Integer.parseInt(split[1]);
+            this.extruderTargetTemp = Integer.parseInt(split[2]);
+        } else if (line.startsWith("f:")) {
+            String[] split = line.substring(2).split(",");
 
-            this.extruderTemp = Integer.parseInt(arrayOfString[1]);
-            this.extruderTargetTemp = Integer.parseInt(arrayOfString[2]);
-        } else if (paramString.startsWith("f:")) {
-            arrayOfString = paramString.substring(2).split(",");
+            this.spoolLeftMM = Integer.parseInt(split[1]);
+        } else if (line.startsWith("w:")) {
+            String[] split = line.substring(2).split(",");
 
-            this.spoolLeftMM = Integer.parseInt(arrayOfString[1]);
-        } else if (paramString.startsWith("w:")) {
-            arrayOfString = paramString.substring(2).split(",");
+            this.filamentSerial = split[1];
+        } else if (line.startsWith("o:")) {
+            String[] split = line.substring(2).split(",");
 
-            this.filamentSerial = arrayOfString[1];
-        } else if (paramString.startsWith("o:")) {
-            arrayOfString = paramString.substring(2).split(",");
+            this.packageSize = (Integer.parseInt(split[0].substring(1)) * 1024);
+            this.autoLeveling = split[3].equals("a+");
+        } else if (line.startsWith("j:")) {
+            String[] split = line.substring(2).split(",");
 
-            this.packageSize = (Integer.parseInt(arrayOfString[0].substring(1)) * 1024);
-            this.autoLeveling = arrayOfString[3].equals("a+");
-        } else if (paramString.startsWith("j:")) {
-            arrayOfString = paramString.substring(2).split(",");
+            this.printStatus = PrintStatus.fromInt(Integer.parseInt(split[0]));
+            this.printSubStatus = Integer.parseInt(split[1]);
+        } else if (line.startsWith("b:")) {
+            this.bedTemp = Integer.parseInt(line.substring(2));
+        } else if (line.startsWith("e:")) {
+            this.errorCode = Integer.parseInt(line.substring(2));
+        } else if (line.startsWith("z:")) {
+            this.zOffset = Integer.parseInt(line.substring(2));
+        } else if (line.startsWith("n:")) {
+            this.printerName = line.substring(2);
+        } else if (line.startsWith("v:")) {
+            this.firmwareVersion = line.substring(2);
+        } else if (line.startsWith("p:")) {
+            this.modelNumber = line.substring(2);
+        } else if (line.startsWith("i:")) {
+            this.printerSerial = line.substring(2);
+        } else if (line.startsWith("c:")) {
+            String[] split = line.substring(3, line.length() - 1).split(",");
 
-            this.printStatus = PrintStatus.fromInt(Integer.parseInt(arrayOfString[0]));
-            this.printSubStatus = Integer.parseInt(arrayOfString[1]);
-        } else if (paramString.startsWith("b:")) {
-            this.bedTemp = Integer.parseInt(paramString.substring(2));
-        } else if (paramString.startsWith("e:")) {
-            this.errorCode = Integer.parseInt(paramString.substring(2));
-        } else if (paramString.startsWith("z:")) {
-            this.zOffset = Integer.parseInt(paramString.substring(2));
-        } else if (paramString.startsWith("n:")) {
-            this.printerName = paramString.substring(2);
-        } else if (paramString.startsWith("v:")) {
-            this.firmwareVersion = paramString.substring(2);
-        } else if (paramString.startsWith("p:")) {
-            this.modelNumber = paramString.substring(2);
-        } else if (paramString.startsWith("i:")) {
-            this.printerSerial = paramString.substring(2);
-        } else if (paramString.startsWith("c:")) {
-            arrayOfString = paramString.substring(3, paramString.length() - 1).split(",");
-
-            this.calibration = new int[arrayOfString.length];
-            for (int i = 0; i < arrayOfString.length; i++) {
-                this.calibration[i] = Integer.parseInt(arrayOfString[i]);
+            this.calibration = new int[split.length];
+            for (int i = 0; i < split.length; i++) {
+                this.calibration[i] = Integer.parseInt(split[i]);
             }
-        } else if (paramString.startsWith("d:")) {
-            arrayOfString = paramString.substring(2).split(",");
+        } else if (line.startsWith("d:")) {
+            String[] split = line.substring(2).split(",");
 
-            this.percentComplete = Integer.parseInt(arrayOfString[0]);
-            this.elapsedTimeMinutes = Integer.parseInt(arrayOfString[1]);
-            this.estimatedTimeLeftMinutes = Integer.parseInt(arrayOfString[2]);
+            this.percentComplete = Integer.parseInt(split[0]);
+            this.elapsedTimeMinutes = Integer.parseInt(split[1]);
+            this.estimatedTimeLeftMinutes = Integer.parseInt(split[2]);
         } else {
-            System.out.println("Unhandled line [" + paramString + "]");
+            System.out.println("Unhandled line [" + line + "]");
         }
     }
 
     @Override
     public String toString() {
-        StringBuilder localStringBuilder = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
-        localStringBuilder.append("XYZInfo:\n");
-        localStringBuilder.append("\tPercent complete: ").append(this.percentComplete).append("\n");
-        localStringBuilder.append("\tElapsed time: ").append(this.elapsedTimeMinutes).append(" minutes\n");
-        localStringBuilder.append("\tEstimated time left: ").append(this.estimatedTimeLeftMinutes).append(" minutes\n");
-        localStringBuilder.append("\tCalibration: ").append(Arrays.toString(this.calibration)).append("\n");
-        localStringBuilder.append("\tExtruder target temp: ").append(getExtruderTargetTemp()).append("\n");
-        localStringBuilder.append("\tExtruder temp: ").append(getExtruderTemp()).append("\n");
-        localStringBuilder.append("\tSpool left: ").append(this.spoolLeftMM).append(" mm\n");
-        localStringBuilder.append("\tPrinter name: ").append(getPrinterName()).append("\n");
-        localStringBuilder.append("\tModel: ").append(getModelNumber()).append("\n");
-        localStringBuilder.append("\tSerial: ").append(getPrinterSerial()).append("\n");
-        localStringBuilder.append("\tPackage size: ").append(this.packageSize).append("\n");
-        localStringBuilder.append("\tAuto leveling: ").append(this.autoLeveling).append("\n");
-        localStringBuilder.append("\tPrinter status: ").append(this.printStatus).append("\n");
-        localStringBuilder.append("\tPrinter sub status: ").append(this.printSubStatus).append("\n");
-        localStringBuilder.append("\tFilament serial: ").append(this.filamentSerial).append("\n");
-        localStringBuilder.append("\tFilament name: ").append(getFilamentName()).append("\n");
+        sb.append("XYZInfo:\n");
+        sb.append("\tPercent complete: ").append(this.percentComplete).append("\n");
+        sb.append("\tElapsed time: ").append(this.elapsedTimeMinutes).append(" minutes\n");
+        sb.append("\tEstimated time left: ").append(this.estimatedTimeLeftMinutes).append(" minutes\n");
+        sb.append("\tCalibration: ").append(Arrays.toString(this.calibration)).append("\n");
+        sb.append("\tExtruder target temp: ").append(getExtruderTargetTemp()).append("\n");
+        sb.append("\tExtruder temp: ").append(getExtruderTemp()).append("\n");
+        sb.append("\tSpool left: ").append(this.spoolLeftMM).append(" mm\n");
+        sb.append("\tPrinter name: ").append(getPrinterName()).append("\n");
+        sb.append("\tModel: ").append(getModelNumber()).append("\n");
+        sb.append("\tSerial: ").append(getPrinterSerial()).append("\n");
+        sb.append("\tPackage size: ").append(this.packageSize).append("\n");
+        sb.append("\tAuto leveling: ").append(this.autoLeveling).append("\n");
+        sb.append("\tPrinter status: ").append(this.printStatus).append("\n");
+        sb.append("\tPrinter sub status: ").append(this.printSubStatus).append("\n");
+        sb.append("\tFilament serial: ").append(this.filamentSerial).append("\n");
+        sb.append("\tFilament name: ").append(getFilamentName()).append("\n");
 
-        return localStringBuilder.toString();
+        return sb.toString();
     }
 
     public int[] getCalibration() {
@@ -313,20 +311,20 @@ public class XYZInfo {
         STATE_PRINT_CANCELLING(9602),
         STATE_PRINT_BUSY(9700);
 
-        private static PrintStatus fromInt(int paramInt) {
-            for (PrintStatus localPrintStatus : PrintStatus.values()) {
-                if (localPrintStatus.status == paramInt) {
-                    return localPrintStatus;
+        private static PrintStatus fromInt(int status) {
+            for (PrintStatus p : PrintStatus.values()) {
+                if (p.status == status) {
+                    return p;
                 }
             }
 
             return UNKNOWN;
         }
 
-        private int status;
+        private final int status;
 
-        private PrintStatus(int paramInt) {
-            this.status = paramInt;
+        private PrintStatus(int status) {
+            this.status = status;
         }
     }
 

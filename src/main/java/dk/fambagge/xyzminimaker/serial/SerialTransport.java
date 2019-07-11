@@ -35,29 +35,29 @@ public class SerialTransport
         this.parity = 0;
     }
 
-    public SerialTransport(String paramString, int paramInt) {
+    public SerialTransport(String portName, int baudrate) {
         this();
-        this.portIdentifier = paramString;
-        this.baudrate = paramInt;
+        this.portIdentifier = portName;
+        this.baudrate = baudrate;
     }
 
-    public void setPortOptions(int paramInt1, int paramInt2, int paramInt3, int paramInt4) {
+    public void setPortOptions(int baudrate, int dataBits, int stopBits, int parity) {
         if (isOpen()) {
             System.out.println("Setting port options on an already open port!");
         }
 
-        this.baudrate = paramInt1;
-        this.dataBits = paramInt2;
-        this.stopBits = paramInt3;
-        this.parity = paramInt4;
+        this.baudrate = baudrate;
+        this.dataBits = dataBits;
+        this.stopBits = stopBits;
+        this.parity = parity;
     }
 
-    public void setBaudrate(int paramInt) {
+    public void setBaudrate(int baudrate) {
         if (isOpen()) {
             System.out.println("Setting port options on an already open port!");
         }
 
-        this.baudrate = paramInt;
+        this.baudrate = baudrate;
     }
 
     @Override
@@ -71,38 +71,38 @@ public class SerialTransport
     @Override
     public void close() {
         synchronized (globalOpenStateAtomicSync) {
-            long l = System.currentTimeMillis();
+            long start = System.currentTimeMillis();
             if (!isOpen()) {
                 return;
             }
             if (this.inputStream != null) {
                 try {
                     this.inputStream.close();
-                } catch (IOException localIOException1) {
+                } catch (IOException ex) {
                 }
                 this.inputStream = null;
             }
             if (this.outputStream != null) {
                 try {
                     this.outputStream.close();
-                } catch (IOException localIOException2) {
+                } catch (IOException ex) {
                 }
                 this.outputStream = null;
             }
             this.port.closePort();
             this.port = null;
-            if (System.currentTimeMillis() - l > 50L) {
-                System.out.println("Warning: Port close on " + this.portIdentifier + " took a long time: " + (System.currentTimeMillis() - l) + "ms");
+            if (System.currentTimeMillis() - start > 50L) {
+                System.out.println("Warning: Port close on " + this.portIdentifier + " took a long time: " + (System.currentTimeMillis() - start) + "ms");
             }
         }
     }
 
     @Override
-    public void open(int paramInt)
+    public void open(int timeout)
             throws IOException {
         synchronized (globalOpenStateAtomicSync) {
 
-            long l = System.currentTimeMillis();
+            long start = System.currentTimeMillis();
             if (isOpen()) {
                 close();
             }
@@ -119,8 +119,8 @@ public class SerialTransport
             this.port = localSerialPort;
             this.inputStream = new BufferedInputStream(localSerialPort.getInputStream());
             this.outputStream = localSerialPort.getOutputStream();
-            if (System.currentTimeMillis() - l > paramInt) {
-                System.out.println("Warning: Port open on " + this + " took a long time: " + (System.currentTimeMillis() - l) + "ms");
+            if (System.currentTimeMillis() - start > timeout) {
+                System.out.println("Warning: Port open on " + this + " took a long time: " + (System.currentTimeMillis() - start) + "ms");
             }
         }
     }
@@ -133,21 +133,21 @@ public class SerialTransport
     }
 
     @Override
-    public void write(byte[] paramArrayOfByte, int paramInt)
+    public void write(byte[] data, int length)
             throws IOException {
         synchronized (this.writeAtomicSync) {
             if (this.outputStream != null) {
-                this.outputStream.write(paramArrayOfByte, 0, paramInt);
+                this.outputStream.write(data, 0, length);
             }
         }
     }
 
     @Override
-    public int read(int paramInt)
+    public int read(int timeout)
             throws IOException, InterruptedException {
         synchronized (this.readAtomicSync) {
-            long l = System.nanoTime();
-            while (System.nanoTime() - l < paramInt * 1000000L) {
+            long start = System.nanoTime();
+            while (System.nanoTime() - start < timeout * 1000000L) {
                 if (this.inputStream == null) {
                     throw new IOException("Read on non-connected transport aborted " + this);
                 }
@@ -155,24 +155,24 @@ public class SerialTransport
                     return this.inputStream.read();
                 }
             }
-            throw new TransportTimeoutException("Single-byte read timed out after " + (System.nanoTime() - l) + " nanosecs on '" + this + "'");
+            throw new TransportTimeoutException("Single-byte read timed out after " + (System.nanoTime() - start) + " nanosecs on '" + this + "'");
         }
     }
 
     @Override
-    public int read(int paramInt, byte[] paramArrayOfByte)
+    public int read(int timeout, byte[] data)
             throws IOException, InterruptedException {
         synchronized (this.readAtomicSync) {
-            long l = System.nanoTime();
-            while (System.nanoTime() - l < paramInt * 1000000L) {
+            long start = System.nanoTime();
+            while (System.nanoTime() - start < timeout * 1000000L) {
                 if (this.inputStream == null) {
                     throw new IOException("Read on non-connected transport aborted " + this);
                 }
                 if (this.inputStream.available() > 0) {
-                    return this.inputStream.read(paramArrayOfByte, 0, paramArrayOfByte.length);
+                    return this.inputStream.read(data, 0, data.length);
                 }
             }
-            throw new TransportTimeoutException("Single-byte read timed out after " + (System.nanoTime() - l) + " nanosecs on '" + this + "'");
+            throw new TransportTimeoutException("Single-byte read timed out after " + (System.nanoTime() - start) + " nanosecs on '" + this + "'");
         }
     }
 
@@ -189,8 +189,8 @@ public class SerialTransport
         return this.portIdentifier;
     }
 
-    public void setPortIdentifier(String paramString) {
-        this.portIdentifier = paramString;
+    public void setPortIdentifier(String portIdentifier) {
+        this.portIdentifier = portIdentifier;
     }
 
     @Override

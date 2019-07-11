@@ -19,52 +19,52 @@ import org.eclipse.jetty.webapp.WebXmlConfiguration;
 
 public class Main {
 
-    public static void main(String[] paramArrayOfString) {
+    public static void main(String[] args) {
         try {
-            int i = Integer.parseInt(System.getProperty("jetty.port", "8083"));
+            int port = Integer.parseInt(System.getProperty("jetty.port", "8083"));
 
-            Server localServer = new Server(i);
+            Server server = new Server(port);
 
-            ContextHandlerCollection localContextHandlerCollection = new ContextHandlerCollection();
+            ContextHandlerCollection handlerCollection = new ContextHandlerCollection();
 
-            AliasEnhancedWebAppContext localAliasEnhancedWebAppContext = new AliasEnhancedWebAppContext();
+            AliasEnhancedWebAppContext context = new AliasEnhancedWebAppContext();
 
-            localAliasEnhancedWebAppContext.setContextPath("/");
+            context.setContextPath("/");
 
-            localAliasEnhancedWebAppContext.setConfigurations(new Configuration[]{new AnnotationConfiguration(), new WebXmlConfiguration(), new WebInfConfiguration(), new PlusConfiguration(), new MetaInfConfiguration(), new FragmentConfiguration(), new EnvConfiguration()});
+            context.setConfigurations(new Configuration[]{new AnnotationConfiguration(), new WebXmlConfiguration(), new WebInfConfiguration(), new PlusConfiguration(), new MetaInfConfiguration(), new FragmentConfiguration(), new EnvConfiguration()});
 
             File localFile = new File("./webapp");
 
             if ((localFile.exists()) && (localFile.isDirectory())) {
                 System.out.println("Deployed zipfile!");
-                localAliasEnhancedWebAppContext.setBaseResource(new ResourceCollection(new String[]{"./webapp"}));
+                context.setBaseResource(new ResourceCollection(new String[]{"./webapp"}));
 
-                localAliasEnhancedWebAppContext.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/*.jar");
+                context.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/*.jar");
             } else {
                 System.out.println("Netbeans run!");
-                localAliasEnhancedWebAppContext.setBaseResource(new ResourceCollection(new String[]{"./src/main/webapp", "./target"}));
+                context.setBaseResource(new ResourceCollection(new String[]{"./src/main/webapp", "./target"}));
 
-                localAliasEnhancedWebAppContext.setResourceAlias("/WEB-INF/classes/", "/classes/");
-                localAliasEnhancedWebAppContext.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/classes/.*");
+                context.setResourceAlias("/WEB-INF/classes/", "/classes/");
+                context.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/classes/.*");
             }
 
-            ServletContextHandler localServletContextHandler = new ServletContextHandler();
-            localServletContextHandler.setContextPath("/uploads");
+            ServletContextHandler handler = new ServletContextHandler();
+            handler.setContextPath("/uploads");
 
-            ServletHolder localServletHolder = new ServletHolder("static-home", DefaultServlet.class);
-            localServletHolder.setInitParameter("resourceBase", "./uploads");
-            localServletHolder.setInitParameter("dirAllowed", "true");
-            localServletHolder.setInitParameter("pathInfoOnly", "true");
-            localServletContextHandler.addServlet(localServletHolder, "/*");
+            ServletHolder holder = new ServletHolder("static-home", DefaultServlet.class);
+            holder.setInitParameter("resourceBase", "./uploads");
+            holder.setInitParameter("dirAllowed", "true");
+            holder.setInitParameter("pathInfoOnly", "true");
+            handler.addServlet(holder, "/*");
 
-            localContextHandlerCollection.setHandlers(new Handler[]{localAliasEnhancedWebAppContext, localServletContextHandler});
+            handlerCollection.setHandlers(new Handler[]{context, handler});
 
-            localServer.setHandler(localContextHandlerCollection);
+            server.setHandler(handlerCollection);
 
-            localServer.start();
-            localServer.join();
-        } catch (Exception localException) {
-            localException.printStackTrace();
+            server.start();
+            server.join();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 }

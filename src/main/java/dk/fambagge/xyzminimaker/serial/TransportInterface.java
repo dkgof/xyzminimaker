@@ -5,34 +5,34 @@ import java.nio.ByteBuffer;
 
 public interface TransportInterface {
 
-    public void write(String paramString)
+    public void write(String msg)
             throws IOException;
 
-    public void write(byte[] paramArrayOfByte)
+    public void write(byte[] data)
             throws IOException;
 
-    public void write(byte paramByte, byte[] paramArrayOfByte)
+    public void write(byte opcode, byte[] data)
             throws IOException;
 
-    public void write(byte[] paramArrayOfByte, int paramInt)
+    public void write(byte[] data, int length)
             throws IOException;
 
-    public void write(ByteBuffer paramByteBuffer)
+    public void write(ByteBuffer data)
             throws IOException;
 
-    public void write(ByteBuffer paramByteBuffer, int paramInt)
+    public void write(ByteBuffer data, int length)
             throws IOException;
 
-    public int read(int paramInt)
+    public int read(int timeout)
             throws IOException, InterruptedException;
 
-    public int read(int paramInt, byte[] paramArrayOfByte)
+    public int read(int timeout, byte[] data)
             throws IOException, InterruptedException;
 
-    public String readLine(String paramString, int paramInt)
+    public String readLine(String lineSep, int timeout)
             throws IOException, InterruptedException;
 
-    public String readAnswer(String paramString1, String paramString2, int paramInt)
+    public String readAnswer(String request, String lineSep, int timeout)
             throws IOException, InterruptedException;
 
     public void flush()
@@ -40,7 +40,7 @@ public interface TransportInterface {
 
     public void close();
 
-    public void open(int paramInt)
+    public void open(int timeout)
             throws IOException, InterruptedException;
 
     public boolean isOpen();

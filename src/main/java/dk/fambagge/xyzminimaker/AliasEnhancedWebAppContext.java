@@ -8,7 +8,7 @@ public class AliasEnhancedWebAppContext
         extends WebAppContext {
 
     @Override
-    public String getResourceAlias(String paramString) {
+    public String getResourceAlias(String alias) {
         Map<String, String> localMap = getResourceAliases();
 
         if (localMap == null) {
@@ -16,8 +16,8 @@ public class AliasEnhancedWebAppContext
         }
 
         for (Entry localEntry : localMap.entrySet()) {
-            if (paramString.startsWith((String) localEntry.getKey())) {
-                return paramString.replace((CharSequence) localEntry.getKey(), (CharSequence) localEntry.getValue());
+            if (alias.startsWith((String) localEntry.getKey())) {
+                return alias.replace((CharSequence) localEntry.getKey(), (CharSequence) localEntry.getValue());
             }
         }
 

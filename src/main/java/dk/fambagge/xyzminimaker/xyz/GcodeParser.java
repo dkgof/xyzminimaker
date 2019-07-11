@@ -1,7 +1,11 @@
 package dk.fambagge.xyzminimaker.xyz;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.CRC32;
@@ -34,17 +38,17 @@ public class GcodeParser {
         }
 
         private final String gcode;
-        private final byte xyzEncoded[];
+        private final byte[] xyzEncoded;
         private final int filamentUsed;
         private final int printTime;
         private final int numLayers;
 
-        public Gcode(String s, byte abyte0[], int i, int j, int k) {
-            gcode = s;
-            xyzEncoded = abyte0;
-            filamentUsed = i;
-            printTime = j;
-            numLayers = k;
+        public Gcode(String gcode, byte[] xyzEncoded, int filamentUsed, int printTime, int numLayers) {
+            this.gcode = gcode;
+            this.xyzEncoded = xyzEncoded;
+            this.filamentUsed = filamentUsed;
+            this.printTime = printTime;
+            this.numLayers = numLayers;
         }
     }
 
@@ -52,123 +56,117 @@ public class GcodeParser {
     }
 
     public static Gcode parse(InputStream inputstream) {
-        long l = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         try {
-            System.out.println((new StringBuilder()).append("[").append(System.currentTimeMillis() - l).append("ms] Reading lines...").toString());
-            BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(inputstream));
-            ArrayList arraylist = new ArrayList();
-            for (String s = bufferedreader.readLine(); s != null; s = bufferedreader.readLine()) {
-                arraylist.add(s);
-            }
+            System.out.println("["+(System.currentTimeMillis() - start)+"ms] Parsing lines...");
+            
+            int printTime = 0;
+            int layerCount = 0;
+            int filamentUsed = 0;
 
-            int i = 0;
-            int j = 0;
-            int k = 0;
-            StringBuilder stringbuilder = new StringBuilder();
-            StringBuilder stringbuilder1 = new StringBuilder();
-            System.out.println((new StringBuilder()).append("[").append(System.currentTimeMillis() - l).append("ms] Parsing lines...").toString());
-            Object obj = arraylist.iterator();
-            do {
-                if (!((Iterator) (obj)).hasNext()) {
-                    break;
-                }
-                String s1 = (String) ((Iterator) (obj)).next();
-                s1 = s1.trim();
-                if (s1.startsWith(";")) {
-                    if (s1.startsWith(";TIME:")) {
-                        i = Integer.parseInt(s1.substring(6));
-                    } else if (s1.startsWith(";LAYER_COUNT:")) {
-                        j = Integer.parseInt(s1.substring(13));
-                    } else if (s1.startsWith(";Filament used:")) {
-                        k = (int) (Double.parseDouble(s1.substring(15, s1.length() - 1)) * 1000D);
+            StringBuilder sbFile = new StringBuilder();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputstream));
+            for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+                line = line.trim();
+                if (line.startsWith(";")) {
+                    if (line.startsWith(";TIME:")) {
+                        printTime = Integer.parseInt(line.substring(6));
+                    } else if (line.startsWith(";LAYER_COUNT:")) {
+                        layerCount = Integer.parseInt(line.substring(13));
+                    } else if (line.startsWith(";Filament used:")) {
+                        filamentUsed = (int) (Double.parseDouble(line.substring(15, line.length() - 1)) * 1000D);
                     }
                 } else {
-                    stringbuilder1.append(s1.replace("G0", "G1")).append("\n");
+                    sbFile.append(line.replace("G0", "G1")).append("\n");
                 }
-            } while (true);
-            stringbuilder.append("; filename = temp.3w\n");
-            stringbuilder.append("; print_time  = ").append(i).append("\n");
-            stringbuilder.append("; machine = dv1MX0A000\n");
-            stringbuilder.append("; total_layers  = ").append(j).append("\n");
-            stringbuilder.append("; version   = 18020109\n");
-            stringbuilder.append("; total_filament   = ").append(k).append("\n");
-            obj = stringbuilder.toString();
-            String s2 = (new StringBuilder()).append(((String) (obj))).append(stringbuilder1.toString()).toString();
-            byte abyte0[] = null;
-            byte abyte1[] = null;
-            System.out.println((new StringBuilder()).append("[").append(System.currentTimeMillis() - l).append("ms] Encrypting header and gcode...").toString());
+            }
+            
+            StringBuilder sbHeader = new StringBuilder();
+            sbHeader.append("; filename = temp.3w\n");
+            sbHeader.append("; print_time  = ").append(printTime).append("\n");
+            sbHeader.append("; machine = ").append(MINIMAKER_ID).append("\n");
+            sbHeader.append("; total_layers  = ").append(layerCount).append("\n");
+            sbHeader.append("; version   = 18020109\n");
+            sbHeader.append("; total_filament   = ").append(filamentUsed).append("\n");
+            String header = sbHeader.toString();
+            String gcodeString = header + sbFile.toString();
+            
+            byte encryptedBytes1[] = null;
+            byte encryptedBytes2[] = null;
+            System.out.println("["+(System.currentTimeMillis() - start)+"ms] Encrypting header and gcode...");
             try {
-                String s3 = "@xyzprinting.com";
-                byte abyte2[] = s3.getBytes("UTF-8");
-                byte abyte4[] = new byte[16];
-                SecretKeySpec secretkeyspec = new SecretKeySpec(abyte2, "AES");
+                String keyString = "@xyzprinting.com";
+                byte keyBytes[] = keyString.getBytes("UTF-8");
+                byte ivBuffer[] = new byte[16];
+                SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
                 Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(1, secretkeyspec, new IvParameterSpec(abyte4));
-                byte abyte6[] = ((String) (obj)).getBytes();
-                int i2 = abyte6.length;
-                int k2 = i2 % 16;
-                byte abyte8[] = new byte[i2 + k2];
-                System.arraycopy(abyte6, 0, abyte8, 0, i2);
-                abyte0 = cipher.doFinal(abyte8);
+                cipher.init(1, keySpec, new IvParameterSpec(ivBuffer));
+                byte gcodeBytes[] = gcodeString.getBytes();
+                int gcodeLength = gcodeBytes.length;
+                int gcodeLengthModulus16 = gcodeLength % 16;
+                byte gcodePaddedBytes[] = new byte[gcodeLength + gcodeLengthModulus16];
+                System.arraycopy(gcodeBytes, 0, gcodePaddedBytes, 0, gcodeLength);
+                encryptedBytes1 = cipher.doFinal(gcodePaddedBytes);
             } catch (Exception exception) {
-                System.out.println((new StringBuilder()).append("Error during encryption: ").append(exception).toString());
+                System.out.println("Error during encryption: "+exception);
                 exception.printStackTrace();
             }
             try {
-                String s4 = "@xyzprinting.com@xyzprinting.com";
-                byte abyte3[] = s4.getBytes("UTF-8");
-                byte abyte5[] = new byte[16];
-                SecretKeySpec secretkeyspec1 = new SecretKeySpec(abyte3, "AES");
-                Cipher cipher1 = Cipher.getInstance("AES/ECB/PKCS5Padding");
-                cipher1.init(1, secretkeyspec1);
-                byte abyte7[] = s2.getBytes();
-                int j2 = abyte7.length;
-                int l2 = j2 % 16;
-                byte abyte9[] = new byte[j2 + l2];
-                System.arraycopy(abyte7, 0, abyte9, 0, j2);
-                abyte1 = cipher1.doFinal(abyte9);
+                String keyString = "@xyzprinting.com@xyzprinting.com";
+                byte keyBytes[] = keyString.getBytes("UTF-8");
+                //byte ivBuffer[] = new byte[16];
+                SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+                Cipher ciper = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                ciper.init(1, keySpec);
+                byte gcodeBytes[] = gcodeString.getBytes();
+                int gcodeLength = gcodeBytes.length;
+                int gcodeLengthModulus16 = gcodeLength % 16;
+                byte gcodePaddedBytes[] = new byte[gcodeLength + gcodeLengthModulus16];
+                System.arraycopy(gcodeBytes, 0, gcodePaddedBytes, 0, gcodeLength);
+                encryptedBytes2 = ciper.doFinal(gcodePaddedBytes);
             } catch (Exception exception) {
-                System.out.println((new StringBuilder()).append("Error during encryption: ").append(exception).toString());
+                System.out.println("Error during encryption: "+exception);
                 exception.printStackTrace();
             }
-            System.out.println((new StringBuilder()).append("[").append(System.currentTimeMillis() - l).append("ms] Writing file...").toString());
-            ByteArrayOutputStream bytearrayoutputstream = new ByteArrayOutputStream();
-            DataOutputStream dataoutputstream = new DataOutputStream(bytearrayoutputstream);
-            dataoutputstream.writeBytes("3DPFNKG13WTW");
-            dataoutputstream.write(1);
-            dataoutputstream.write(2);
-            dataoutputstream.write(0);
-            dataoutputstream.write(0);
-            dataoutputstream.writeInt(4684);
-            for (int i1 = 0; i1 < 4684; i1++) {
-                dataoutputstream.write(0);
+            System.out.println("["+(System.currentTimeMillis() - start)+"ms] Writing file...");
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(bout);
+            out.writeBytes(FILE_TYPE);
+            out.write(1);
+            out.write(2);
+            out.write(0);
+            out.write(0);
+            out.writeInt(4684);
+            for (int i = 0; i < 4684; i++) {
+                out.write(0);
             }
 
-            dataoutputstream.writeBytes("TagEJ256");
-            dataoutputstream.writeInt(68);
-            dataoutputstream.writeInt(calcXYZcrc32(abyte1));
-            for (int j1 = 0; j1 < 64; j1++) {
-                dataoutputstream.write(0);
+            out.writeBytes("TagEJ256");
+            out.writeInt(68);
+            out.writeInt(calcXYZcrc32(encryptedBytes2));
+            for (int i = 0; i < 64; i++) {
+                out.write(0);
             }
 
-            dataoutputstream.write(abyte0);
-            int k1 = dataoutputstream.size();
-            for (int l1 = 0; l1 < 8192 - k1; l1++) {
-                dataoutputstream.write(0);
+            out.write(encryptedBytes1);
+            int k1 = out.size();
+            for (int i = 0; i < 8192 - k1; i++) {
+                out.write(0);
             }
 
-            dataoutputstream.write(abyte1);
-            System.out.println((new StringBuilder()).append("[").append(System.currentTimeMillis() - l).append("ms] File convertion done...").toString());
-            return new Gcode(s2, bytearrayoutputstream.toByteArray(), k, i, j);
+            out.write(encryptedBytes2);
+            System.out.println("["+(System.currentTimeMillis() - start)+"ms] File convertion done...");
+            return new Gcode(gcodeString, bout.toByteArray(), filamentUsed, printTime, layerCount);
         } catch (IOException ioexception) {
             Logger.getLogger(GcodeParser.class.getName()).log(Level.SEVERE, null, ioexception);
         }
         return null;
     }
 
-    private static int calcXYZcrc32(byte abyte0[]) {
+    private static int calcXYZcrc32(byte[] data) {
         CRC32 crc32 = new CRC32();
-        crc32.update(abyte0);
+        crc32.update(data);
         return (int) crc32.getValue();
     }
 

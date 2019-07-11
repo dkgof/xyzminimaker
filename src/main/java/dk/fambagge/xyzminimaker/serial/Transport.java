@@ -17,68 +17,69 @@ public abstract class Transport
     }
 
     @Override
-    public void write(String paramString)
+    public void write(String msg)
             throws IOException {
-        write(paramString.getBytes());
+        write(msg.getBytes());
     }
 
     @Override
-    public void write(byte[] paramArrayOfByte)
+    public void write(byte[] data)
             throws IOException {
-        write(paramArrayOfByte, paramArrayOfByte.length);
+        write(data, data.length);
     }
 
     @Override
-    public void write(byte paramByte, byte[] paramArrayOfByte)
+    public void write(byte opcode, byte[] msg)
             throws IOException {
         synchronized (this.writeAtomicSync) {
-            write(new byte[]{paramByte});
-            write(paramArrayOfByte, paramArrayOfByte.length);
+            write(new byte[]{opcode});
+            write(msg, msg.length);
         }
     }
 
     @Override
-    public void write(ByteBuffer paramByteBuffer)
+    public void write(ByteBuffer data)
             throws IOException {
-        write(paramByteBuffer, paramByteBuffer.remaining());
+        write(data, data.remaining());
     }
 
     @Override
-    public void write(ByteBuffer paramByteBuffer, int paramInt)
+    public void write(ByteBuffer data, int length)
             throws IOException {
-        byte[] arrayOfByte = new byte[paramByteBuffer.remaining()];
-        paramByteBuffer.get(arrayOfByte);
-        write(arrayOfByte);
+        byte[] buffer = new byte[length];
+        data.get(buffer);
+        write(buffer);
     }
 
     @Override
-    public String readAnswer(String paramString1, String paramString2, int paramInt)
+    public String readAnswer(String request, String lineSep, int timeout)
             throws IOException, InterruptedException {
         synchronized (this.writeAtomicSync) {
             synchronized (this.readAtomicSync) {
-                write(paramString1);
+                write(request);
                 flush();
-                return readLine(paramString2, paramInt);
+                return readLine(lineSep, timeout);
             }
         }
     }
 
-    public String readLine(String paramString, int paramInt)
+    @Override
+    public String readLine(String lineSep, int timeout)
             throws IOException, InterruptedException {
         synchronized (this.readAtomicSync) {
-            long l = System.nanoTime();
-            StringBuilder localStringBuilder = new StringBuilder();
-            while (System.nanoTime() - l < paramInt * 1000000L) {
-                char c = (char) read(paramInt);
+            long start = System.nanoTime();
+            StringBuilder sb = new StringBuilder();
+            while (System.nanoTime() - start < timeout * 1000000L) {
+                char c = (char) read(timeout);
 
-                localStringBuilder.append(c);
+                sb.append(c);
 
-                int i = localStringBuilder.length() - paramString.length();
-                if ((i >= 0) && (localStringBuilder.substring(i).equals(paramString))) {
-                    return localStringBuilder.toString().substring(0, i);
+                int currentRealLength  = sb.length() - lineSep.length();
+                if ((currentRealLength  >= 0) && (sb.substring(currentRealLength ).equals(lineSep))) {
+                    return sb.toString().substring(0, currentRealLength );
                 }
             }
-            return localStringBuilder.toString();
+            return sb.toString();
         }
     }
 }
